@@ -35,6 +35,39 @@ CREATE TABLE IF NOT EXISTS publications (
     published_by TEXT NOT NULL,
     published_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS split_days (
+    day DATE PRIMARY KEY,
+    mode TEXT NOT NULL CHECK (mode IN ('aggregate', 'per_crop')),
+    decided_by TEXT NOT NULL,
+    decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS library_rows (
+    id BIGSERIAL PRIMARY KEY,
+    day DATE NOT NULL,
+    mode TEXT NOT NULL CHECK (mode IN ('aggregate', 'per_crop')),
+    row_key TEXT NOT NULL,
+    crop_name TEXT,
+    members TEXT[] NOT NULL,
+    trial_count INTEGER NOT NULL,
+    tested INTEGER NOT NULL,
+    excluded_mold INTEGER NOT NULL,
+    sprouted INTEGER NOT NULL,
+    rate_bp INTEGER NOT NULL,
+    published_by TEXT NOT NULL,
+    published_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (day, row_key)
+);
+
+CREATE TABLE IF NOT EXISTS split_events (
+    id BIGSERIAL PRIMARY KEY,
+    day DATE NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('drift', 'contention')),
+    actor TEXT NOT NULL,
+    detail TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 """
 
 
@@ -125,3 +158,18 @@ def _seed(conn):
     )
     publish(conn, rice, "admin", LEGACY)
     conn.execute("UPDATE trials SET status = %s WHERE id = %s", ("待按现行口径重算", rice))
+    _add_trial(
+        conn,
+        "YC-2502",
+        "油菜",
+        "待落库",
+        [(1, 90, 81, 2), (2, 90, 79, 4)],
+    )
+    _add_trial(
+        conn,
+        "UN-2503",
+        "",
+        "作物名空缺待补",
+        [(1, 60, 44, 2)],
+    )
+    _add_trial(conn, "EM-2504", "芝麻", "待补床次", [])
